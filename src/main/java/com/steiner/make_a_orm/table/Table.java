@@ -1,6 +1,7 @@
 package com.steiner.make_a_orm.table;
 
 import com.steiner.make_a_orm.column.Column;
+import com.steiner.make_a_orm.column.IAutoIncrement;
 import com.steiner.make_a_orm.column.numeric.IntegerType;
 import com.steiner.make_a_orm.column.string.CharacterType;
 import com.steiner.make_a_orm.column.string.CharacterVaryingType;
@@ -34,8 +35,19 @@ public abstract class Table {
                 .filter(column -> column.isPrimaryKey)
                 .toList();
 
+        int autoIncrementCount = columns.stream()
+                .filter(column -> column instanceof IAutoIncrement<?>)
+                .map(column -> (IAutoIncrement<?>) column)
+                .map(column -> column.isAutoIncrement() ? 1 : 0)
+                .reduce(0, Integer::sum);
+
+
         if (primaryKeys.size() > 1) {
             throw new SQLBuildException("too many primary key");
+        }
+
+        if (autoIncrementCount > 1) {
+            throw new SQLBuildException("too many auto increment field");
         }
 
         if (primaryKeys.size() == 1) {

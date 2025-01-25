@@ -24,4 +24,9 @@ public class IntegerType extends Column<Integer> implements IAutoIncrement<Integ
         isAutoIncrement = true;
         return this;
     }
+
+    @Override
+    public boolean isAutoIncrement() {
+        return this.isAutoIncrement;
+    }
 }
