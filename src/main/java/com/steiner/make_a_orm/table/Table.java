@@ -6,17 +6,15 @@ import com.steiner.make_a_orm.column.numeric.IntegerType;
 import com.steiner.make_a_orm.column.string.CharacterType;
 import com.steiner.make_a_orm.column.string.CharacterVaryingType;
 import com.steiner.make_a_orm.exception.SQLBuildException;
-import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.steiner.make_a_orm.operation.select.Query;
+import jakarta.annotation.Nonnull;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public abstract class Table {
-    private static final Logger logger = LoggerFactory.getLogger(Table.class);
-
     public String name;
     public List<Column<?>> columns;
 
@@ -27,7 +25,7 @@ public abstract class Table {
 
     public String build() {
         String columnStrings = columns.stream()
-                .map(column -> "\t" + column.build())
+                .map(column -> "\t" + column.buildColumn())
                 .collect(Collectors.joining(",\n"));
 
         // TODO add primary key
@@ -55,32 +53,49 @@ public abstract class Table {
             columnStrings += String.format(",\n\tprimary key(`%s`)", primaryKey.name);
         }
 
-        return String.format("create table %s (\n%s\n);", name, columnStrings);
+        return String.format("create table if not exists `%s` (\n%s\n);", name, columnStrings);
     }
 
-    @NotNull
-    public CharacterVaryingType characterVarying(@NotNull String name, int length) {
+    @Nonnull
+    public CharacterVaryingType characterVarying(@Nonnull String name, int length) {
         CharacterVaryingType column = new CharacterVaryingType(name, length);
         columns.add(column);
 
         return column;
     }
 
-    @NotNull
-    public CharacterType character(@NotNull String name, int length) {
+    @Nonnull
+    public CharacterType character(@Nonnull String name, int length) {
         CharacterType column = new CharacterType(name, length);
         columns.add(column);
 
         return column;
     }
 
-    @NotNull
-    public IntegerType integer(@NotNull String name) {
+    @Nonnull
+    public IntegerType integer(@Nonnull String name) {
         IntegerType column = new IntegerType(name);
         columns.add(column);
 
         return column;
     }
 
+    /**
+     * example
+     * Users.selectAll
+     */
 
+    @Nonnull
+    public Query select(Column<?> column, Column<?>... otherColumns) {
+        List<Column<?>> columns = new LinkedList<>();
+        columns.add(column);
+        columns.addAll(List.of(otherColumns));
+
+        return new Query(this, columns.toArray(Column<?>[]::new));
+    }
+
+    @Nonnull
+    public Query selectAll() {
+        return new Query(this, columns.toArray(Column<?>[]::new));
+    }
 }
