@@ -1,36 +1,55 @@
 package com.steiner.make_a_orm;
 
 import com.mysql.cj.jdbc.Driver;
-import com.steiner.make_a_orm.impl.Users;
+import com.steiner.make_a_orm.database.Database;
+import com.steiner.make_a_orm.table.Users;
+import com.steiner.make_a_orm.transaction.Transaction;
+import com.steiner.make_a_orm.utils.SchemaUtils;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class DatabaseTest {
-    static final Logger logger = LoggerFactory.getLogger(DatabaseTest.class);
-
-    static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
-    static final String USER = "steiner";
-    static final String PASSWORD = "779151714";
-    static final String URL = "jdbc:mysql://localhost/playground";
     @Test
-    void testCreateTable() {
-        Users users = new Users();
+    public void testCreateTable() throws SQLException {
 
-        try {
-            DriverManager.registerDriver(new Driver());
-            Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
+        Database database = Database.builder()
+                .driver(new Driver())
+                .url("jdbc:mysql://localhost/playground")
+                .username("steiner")
+                .password("779151714")
+                .build();
 
-            Statement statement = connection.createStatement();
-            String sql = users.build();
-            statement.execute(sql);
-        } catch (SQLException e) {
-            logger.error(e.getMessage());
-        }
+        Transaction.runWith(database, () -> {
+            Users userTable = new Users("users");
+            SchemaUtils.create(userTable);
+        });
+    }
+
+    @Test
+    public void testQuery() throws SQLException {
+        Database database = Database.builder()
+                .driver(new Driver())
+                .url("jdbc:mysql://localhost/playground")
+                .username("steiner")
+                .password("779151714")
+                .build();
+
+        Transaction.runWith(database, () -> {
+            Users userTable = new Users("users");
+            userTable.selectAll()
+                    .where(userTable.name.eq("name2"))
+                    .stream()
+                    .findFirst()
+                    .ifPresent(resultRow -> {
+                        int id = resultRow.get(userTable.id);
+                        String name = resultRow.get(userTable.name);
+                        String address = resultRow.get(userTable.address);
+                        int age = resultRow.get(userTable.age);
+
+                        System.out.printf("id=%s, name=%s, address=%s, age=%s\n", id, name, address, age);
+                    });
+
+        });
     }
 }
