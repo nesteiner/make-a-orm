@@ -2,8 +2,10 @@ package com.steiner.make_a_orm.column.numeric;
 
 import com.steiner.make_a_orm.column.Column;
 import com.steiner.make_a_orm.column.IAutoIncrement;
+import com.steiner.make_a_orm.column.ICompareColumn;
+import org.jetbrains.annotations.NotNull;
 
-public class IntegerType extends Column<Integer> implements IAutoIncrement<IntegerType> {
+public class IntegerType extends Column<Integer> implements IAutoIncrement<IntegerType>, ICompareColumn<Integer, Column<Integer >> {
     public boolean isAutoIncrement = false;
 
     public IntegerType(String name) {
@@ -28,5 +30,11 @@ public class IntegerType extends Column<Integer> implements IAutoIncrement<Integ
     @Override
     public boolean isAutoIncrement() {
         return this.isAutoIncrement;
+    }
+
+    @NotNull
+    @Override
+    public Column<Integer> self() {
+        return this;
     }
 }

@@ -1,6 +1,15 @@
 package com.steiner.make_a_orm.column;
 
-public abstract class Column<T> {
+import com.steiner.make_a_orm.exception.SQLParseException;
+import com.steiner.make_a_orm.operation.where.WhereStatement;
+import com.steiner.make_a_orm.operation.where.impl.InList;
+import com.steiner.make_a_orm.operation.where.impl.NullPredicate;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+
+public abstract class Column<T> implements IBuildColumn {
     public String name;
     public boolean isNullable = false;
     public boolean isPrimaryKey = false;
@@ -27,7 +36,8 @@ public abstract class Column<T> {
 
     public abstract String sqlType();
 
-    public final String build() {
+    @Override
+    public String buildColumn() {
         StringBuilder builder = new StringBuilder();
         builder.append(String.format("`%s`", name))
                 .append(" ")
@@ -44,5 +54,26 @@ public abstract class Column<T> {
         }
 
         return builder.toString();
+    }
+
+    public T valueFromDB(ResultSet result) {
+        try {
+            return (T) result.getObject(name);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new SQLParseException(e.getMessage());
+        }
+    }
+
+    public WhereStatement isnull() {
+        return new NullPredicate<>(this, true);
+    }
+
+    public WhereStatement notnull() {
+        return new NullPredicate<>(this, false);
+    }
+
+    public WhereStatement inList(List<T> list) {
+        return new InList<>(this, list);
     }
 }
