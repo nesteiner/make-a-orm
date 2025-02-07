@@ -1,55 +1,49 @@
 package com.steiner.make_a_orm;
 
 import com.mysql.cj.jdbc.Driver;
+import com.steiner.make_a_orm.column.numeric.*;
 import com.steiner.make_a_orm.database.Database;
-import com.steiner.make_a_orm.table.Users;
+import com.steiner.make_a_orm.impl.NumberCollectionTable;
+import com.steiner.make_a_orm.table.IntIdTable;
 import com.steiner.make_a_orm.transaction.Transaction;
 import com.steiner.make_a_orm.utils.SchemaUtils;
+import com.steiner.make_a_orm.utils.result.Result;
 import org.junit.jupiter.api.Test;
 
-import java.sql.SQLException;
-
 public class DatabaseTest {
+    Driver driver = Result.from(Driver::new).get();
+    Database database = Database.builder()
+            .driver(driver)
+            .username("steiner")
+            .password("779151714")
+            .url("jdbc:mysql://localhost/playground")
+            .build()
+            .get();
+
+    NumberCollectionTable longIdTable = NumberCollectionTable.getInstance();
+
     @Test
-    public void testCreateTable() throws SQLException {
-
-        Database database = Database.builder()
-                .driver(new Driver())
-                .url("jdbc:mysql://localhost/playground")
-                .username("steiner")
-                .password("779151714")
-                .build();
-
-        Transaction.runWith(database, () -> {
-            Users userTable = new Users("users");
-            SchemaUtils.create(userTable);
-        });
+    public void testCreateTable() {
+         Transaction.runWith(database, () -> {
+                SchemaUtils.drop(longIdTable);
+                SchemaUtils.create(longIdTable);
+         });
     }
 
+    // 暂时没有测试到 读取 longIdTable 中的值
     @Test
-    public void testQuery() throws SQLException {
-        Database database = Database.builder()
-                .driver(new Driver())
-                .url("jdbc:mysql://localhost/playground")
-                .username("steiner")
-                .password("779151714")
-                .build();
-
+    public void testReadTable() {
         Transaction.runWith(database, () -> {
-            Users userTable = new Users("users");
-            userTable.selectAll()
-                    .where(userTable.name.eq("name2"))
+            longIdTable.selectAll()
                     .stream()
-                    .findFirst()
-                    .ifPresent(resultRow -> {
-                        int id = resultRow.get(userTable.id);
-                        String name = resultRow.get(userTable.name);
-                        String address = resultRow.get(userTable.address);
-                        int age = resultRow.get(userTable.age);
-
-                        System.out.printf("id=%s, name=%s, address=%s, age=%s\n", id, name, address, age);
+                    .forEach(resultRow -> {
+                        System.out.println(resultRow.get(longIdTable.column1));
+                        System.out.println(resultRow.get(longIdTable.column2));
+                        System.out.println(resultRow.get(longIdTable.column3));
+                        System.out.println(resultRow.get(longIdTable.column4));
+                        System.out.println(resultRow.get(longIdTable.column5));
+                        System.out.println(resultRow.get(longIdTable.column6));
                     });
-
         });
     }
 }

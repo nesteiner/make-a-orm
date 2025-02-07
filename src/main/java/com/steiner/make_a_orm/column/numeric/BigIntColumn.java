@@ -5,7 +5,7 @@ import com.steiner.make_a_orm.column.constract.IDefaultValueColumn;
 import jakarta.annotation.Nonnull;
 
 public class BigIntColumn
-        extends NumericColumn<Long>
+        extends AbstractNumericColumn<Long>
         implements
         IAutoIncrement<BigIntColumn>,
         IDefaultValueColumn<Long, BigIntColumn> {

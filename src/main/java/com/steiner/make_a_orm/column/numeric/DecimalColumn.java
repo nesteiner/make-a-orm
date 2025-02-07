@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import java.math.BigDecimal;
 
 public class DecimalColumn
-        extends NumericColumn<BigDecimal>
+        extends AbstractNumericColumn<BigDecimal>
         implements IDefaultValueColumn<BigDecimal, DecimalColumn> {
     public DecimalColumn(String name) {
         super(name);

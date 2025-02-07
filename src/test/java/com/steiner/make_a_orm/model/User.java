@@ -12,4 +12,9 @@ public class User {
         this.address = address;
         this.age = age;
     }
+
+    @Override
+    public String toString() {
+        return "User(id=%s, name=%s, address=%s, age=%s)".formatted(id, name, address, age);
+    }
 }

@@ -4,6 +4,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /** for example
@@ -14,6 +15,9 @@ import java.util.function.Supplier;
  * Result.from(() -> {
  *   Integer value = functionThrowsException();
  * }).ifErr(error -> System.out.println(error.getMessage()));;
+ *
+ * 什么？你这个闭包里调用的函数会抛出多种错误
+ * 那需要你手动 try-catch 并抛出统一类型的 Exception 了
  */
 public final class Result<T, E extends Throwable> {
     public static <T, E extends Throwable> Result<T, E> from(SupplierThrowing<T, E> supplier) {
@@ -23,24 +27,25 @@ public final class Result<T, E extends Throwable> {
         } catch (Throwable e) {
             @SuppressWarnings("unchecked")
             E error = (E) e;
-            return Result.Err(error);
+
+            return Result.Err(error, e);
         }
     }
 
     private static <T, E extends Throwable> Result<T, E> Ok(@Nonnull T data) {
-        return new Result<>(data, null);
+        return new Result<>(data, null, null);
     }
 
-    private static <T, E extends Throwable> Result<T, E> Err(@Nonnull E error) {
-        return new Result<>(null, error);
+    private static <T, E extends Throwable> Result<T, E> Err(@Nonnull E error, @Nonnull Throwable cause) {
+        return new Result<>(null, error, cause);
     }
 
-    private static <T, E extends Throwable, U> Result<U, E> Err(@Nonnull Result<T, E> result) {
+    private static <T, E extends Throwable, U> Result<U, E> Err(@Nonnull Result<T, E> result, @Nonnull Throwable cause) {
         if (result.isOk()) {
             throw new UnsupportedException("cannot transform ok to error");
         }
 
-        return new Result<>(null, result.getError());
+        return new Result<>(null, result.getError(), cause);
     }
 
     @Nullable
@@ -49,9 +54,13 @@ public final class Result<T, E extends Throwable> {
     @Nullable
     public E error;
 
-    private Result(@Nullable T data, @Nullable E error) {
+    @Nullable
+    public Throwable cause;
+
+    private Result(@Nullable T data, @Nullable E error, @Nullable Throwable cause) {
         this.data = data;
         this.error = error;
+        this.cause = cause;
     }
 
     public boolean isOk() {
@@ -75,11 +84,11 @@ public final class Result<T, E extends Throwable> {
     }
 
     @Nonnull
-    public <U> Result<U, E> map(@Nonnull Supplier<U> supplier) {
+    public <U> Result<U, E> map(@Nonnull Function<T, U> function) {
         if (isOk()) {
-            return Result.Ok(supplier.get());
+            return Result.Ok(function.apply(get()));
         } else {
-            return Result.Err(this.getError());
+            return Result.Err(this.getError(), this.getCause());
         }
     }
 
@@ -88,7 +97,7 @@ public final class Result<T, E extends Throwable> {
         if (isOk()) {
             return data;
         } else {
-            throw new UnsupportedException("cannot unwrap result ok");
+            throw new UnsupportedException("cannot unwrap result err", this.getCause());
         }
     };
 
@@ -115,7 +124,16 @@ public final class Result<T, E extends Throwable> {
         if (isErr()) {
             return error;
         } else {
-            throw new UnsupportedException("cannot unwrap result error");
+            throw new UnsupportedException("cannot unwrap result ok");
+        }
+    }
+
+    @Nonnull
+    public Throwable getCause() {
+        if (isErr()) {
+            return cause;
+        } else {
+            throw new UnsupportedException("cannot unwrap result ok");
         }
     }
 }

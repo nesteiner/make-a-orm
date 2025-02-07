@@ -5,7 +5,7 @@ import jakarta.annotation.Nonnull;
 import org.jetbrains.annotations.NotNull;
 
 public class BooleanColumn
-        extends NumericColumn<Boolean>
+        extends AbstractNumericColumn<Boolean>
         implements IDefaultValueColumn<Boolean, BooleanColumn> {
 
     public BooleanColumn(String name) {

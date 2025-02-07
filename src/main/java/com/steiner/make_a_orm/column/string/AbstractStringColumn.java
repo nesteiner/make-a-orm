@@ -3,8 +3,8 @@ package com.steiner.make_a_orm.column.string;
 import com.steiner.make_a_orm.column.Column;
 import jakarta.annotation.Nonnull;
 
-public abstract class StringColumn extends Column<String> {
-    public StringColumn(String name) {
+public abstract class AbstractStringColumn extends Column<String> {
+    public AbstractStringColumn(String name) {
         super(name);
     }
 

@@ -2,7 +2,7 @@ package com.steiner.make_a_orm.column.string;
 
 import jakarta.annotation.Nonnull;
 
-public final class CharacterColumn extends StringColumn {
+public final class CharacterColumn extends AbstractStringColumn {
     private static final int DEFAULT_LENGTH = 256;
 
     private final int length;

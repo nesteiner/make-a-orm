@@ -1,10 +1,10 @@
 package com.steiner.make_a_orm.table;
 
 import com.steiner.make_a_orm.column.Column;
-import com.steiner.make_a_orm.column.IAutoIncrement;
-import com.steiner.make_a_orm.column.numeric.IntegerType;
-import com.steiner.make_a_orm.column.string.CharacterType;
-import com.steiner.make_a_orm.column.string.CharacterVaryingType;
+import com.steiner.make_a_orm.column.constract.IAutoIncrement;
+import com.steiner.make_a_orm.column.numeric.*;
+import com.steiner.make_a_orm.column.string.CharacterColumn;
+import com.steiner.make_a_orm.column.string.CharacterVaryingColumn;
 import com.steiner.make_a_orm.exception.SQLBuildException;
 import com.steiner.make_a_orm.operation.select.Query;
 import jakarta.annotation.Nonnull;
@@ -23,14 +23,14 @@ public abstract class Table {
         this.columns = new ArrayList<>();
     }
 
-    public String build() {
+    public final String build() {
         String columnStrings = columns.stream()
                 .map(column -> "\t" + column.buildColumn())
                 .collect(Collectors.joining(",\n"));
 
         // TODO add primary key
         List<Column<?>> primaryKeys = columns.stream()
-                .filter(column -> column.isPrimaryKey)
+                .filter(Column::isPrimary)
                 .toList();
 
         int autoIncrementCount = columns.stream()
@@ -57,28 +57,87 @@ public abstract class Table {
     }
 
     @Nonnull
-    public CharacterVaryingType characterVarying(@Nonnull String name, int length) {
-        CharacterVaryingType column = new CharacterVaryingType(name, length);
+    public final CharacterVaryingColumn characterVarying(@Nonnull String name, int length) {
+        CharacterVaryingColumn column = new CharacterVaryingColumn(name, length);
         columns.add(column);
 
         return column;
     }
 
     @Nonnull
-    public CharacterType character(@Nonnull String name, int length) {
-        CharacterType column = new CharacterType(name, length);
+    public final CharacterColumn character(@Nonnull String name, int length) {
+        CharacterColumn column = new CharacterColumn(name, length);
         columns.add(column);
 
         return column;
     }
 
     @Nonnull
-    public IntegerType integer(@Nonnull String name) {
-        IntegerType column = new IntegerType(name);
+    public final TinyIntColumn tinyint(@Nonnull String name) {
+        TinyIntColumn column = new TinyIntColumn(name);
         columns.add(column);
 
         return column;
     }
+
+    @Nonnull
+    public final SmallIntColumn smallint(@Nonnull String name) {
+        SmallIntColumn column = new SmallIntColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final IntColumn integer(@Nonnull String name) {
+        IntColumn column = new IntColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final BigIntColumn bigint(@Nonnull String name) {
+        BigIntColumn column = new BigIntColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final BooleanColumn bool(@Nonnull String name) {
+        BooleanColumn column = new BooleanColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final DecimalColumn decimal(@Nonnull String name) {
+        DecimalColumn column = new DecimalColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final DoubleColumn float64(@Nonnull String name) {
+        DoubleColumn column = new DoubleColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+    @Nonnull
+    public final FloatColumn float32(@Nonnull String name) {
+        FloatColumn column = new FloatColumn(name);
+        columns.add(column);
+
+        return column;
+    }
+
+
+
 
     /**
      * example
@@ -86,7 +145,7 @@ public abstract class Table {
      */
 
     @Nonnull
-    public Query select(Column<?> column, Column<?>... otherColumns) {
+    public final Query select(Column<?> column, Column<?>... otherColumns) {
         List<Column<?>> columns = new LinkedList<>();
         columns.add(column);
         columns.addAll(List.of(otherColumns));
@@ -95,7 +154,7 @@ public abstract class Table {
     }
 
     @Nonnull
-    public Query selectAll() {
+    public final Query selectAll() {
         return new Query(this, columns.toArray(Column<?>[]::new));
     }
 }

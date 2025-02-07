@@ -5,9 +5,9 @@ import com.steiner.make_a_orm.column.constract.ICompareColumn;
 import jakarta.annotation.Nonnull;
 
 
-public abstract class NumericColumn<T extends Comparable<T>>
+public abstract class AbstractNumericColumn<T extends Comparable<T>>
         extends Column<T> implements ICompareColumn<T, Column<T>> {
-    public NumericColumn(String name) {
+    public AbstractNumericColumn(String name) {
         super(name);
     }
 

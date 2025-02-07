@@ -1,6 +1,7 @@
 package com.steiner.make_a_orm.database;
 
 import com.steiner.make_a_orm.exception.SQLBuildException;
+import com.steiner.make_a_orm.utils.result.Result;
 import jakarta.annotation.Nullable;
 
 import java.lang.reflect.Field;
@@ -47,20 +48,22 @@ public class Database {
             return this;
         }
 
-        public Database build() throws SQLException {
-            Field[] fields = getClass().getDeclaredFields();
-            for (Field field: fields) {
-                try {
-                    Object value = field.get(this);
-                    if (value == null) {
-                        throw new IllegalAccessException("there is null field in the builder");
+        public Result<Database, SQLException> build() {
+            return Result.from(() -> {
+                Field[] fields = getClass().getDeclaredFields();
+                for (Field field: fields) {
+                    try {
+                        Object value = field.get(this);
+                        if (value == null) {
+                            throw new IllegalAccessException("there is null field in the builder");
+                        }
+                    } catch (IllegalAccessException e) {
+                        throw new SQLException(e.getMessage());
                     }
-                } catch (IllegalAccessException e) {
-                    throw new SQLException(e.getMessage());
                 }
-            }
 
-            return new Database(driver, url, username, password);
+                return new Database(driver, url, username, password);
+            });
         }
     }
 

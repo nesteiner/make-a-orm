@@ -3,7 +3,7 @@ package com.steiner.make_a_orm.column.numeric;
 import com.steiner.make_a_orm.column.constract.IDefaultValueColumn;
 import jakarta.annotation.Nonnull;
 
-public class DoubleColumn extends NumericColumn<Double>
+public class DoubleColumn extends AbstractNumericColumn<Double>
         implements IDefaultValueColumn<Double, DoubleColumn> {
     public DoubleColumn(String name) {
         super(name);

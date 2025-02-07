@@ -4,7 +4,7 @@ import com.steiner.make_a_orm.column.constract.IAutoIncrement;
 import com.steiner.make_a_orm.column.constract.IDefaultValueColumn;
 import jakarta.annotation.Nonnull;
 
-public final class IntColumn extends NumericColumn<Integer>
+public final class IntColumn extends AbstractNumericColumn<Integer>
         implements
         IAutoIncrement<IntColumn>,
         IDefaultValueColumn<Integer, IntColumn> {

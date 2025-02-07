@@ -5,12 +5,11 @@ import com.steiner.make_a_orm.operation.where.WhereStatement;
 import com.steiner.make_a_orm.table.Table;
 import com.steiner.make_a_orm.transaction.Transaction;
 import com.steiner.make_a_orm.utils.GlobalLogger;
+import com.steiner.make_a_orm.utils.result.Result;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +21,8 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class Query implements Spliterator<ResultRow> {
+    private static final String COUNT_NAME = "total";
+
     public Table fromTable;
     public List<Column<?>> fields;
 
@@ -44,6 +45,8 @@ public class Query implements Spliterator<ResultRow> {
     @Nullable
     public Long offset;
 
+    public boolean isCount;
+
     public Connection connection;
 
     public Query(Table fromTable, Column<?>... columns) {
@@ -60,25 +63,27 @@ public class Query implements Spliterator<ResultRow> {
         this.limit = null;
         this.offset = null;
 
+        this.isCount = false;
+
         this.connection = Transaction.currentConnection();
     }
 
-    public Query where(WhereStatement whereStatement) {
+    public Query where(@Nonnull WhereStatement whereStatement) {
         this.whereStatement = whereStatement;
         return this;
     }
 
-    public Query where(Supplier<WhereStatement> block) {
+    public Query where(@Nonnull Supplier<WhereStatement> block) {
         this.whereStatement = block.get();
         return this;
     }
 
-    public Query orderBy(Column<?> column) {
+    public Query orderBy(@Nonnull Column<?> column) {
         this.orderBy = column;
         return this;
     }
 
-    public Query orderBy(Column<?> column, SortBy sortBy) {
+    public Query orderBy(@Nonnull Column<?> column, @Nonnull SortBy sortBy) {
         this.orderBy = column;
         this.reverse = sortBy.reverse;
         return this;
@@ -94,10 +99,32 @@ public class Query implements Spliterator<ResultRow> {
         return this;
     }
 
+    public long count() {
+        this.isCount = true;
+        String sql = buildQuery();
+
+        return Result.from(() -> {
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery(sql);
+
+            if (!result.next()) {
+                 return 0L;
+            } else {
+                return result.getLong(COUNT_NAME);
+            }
+        }).orElse(0L);
+    }
+
     public String buildQuery() {
         StringBuilder stringBuilder = new StringBuilder();
-        String fieldNames = fields.stream().map(field -> field.name).collect(Collectors.joining(", "));
-        String mainPart = "select %s from %s".formatted(fieldNames, fromTable.name);
+        String fieldNames = fields.stream().map(field -> "`%s`".formatted(field.name)).collect(Collectors.joining(", "));
+        String mainPart = null;
+
+        if (isCount) {
+            mainPart = "select count(*) as %s from `%s`".formatted(COUNT_NAME, fromTable.name);
+        } else {
+            mainPart = "select %s from `%s`".formatted(fieldNames, fromTable.name);
+        }
 
         stringBuilder.append(mainPart);
         if (whereStatement != null) {
@@ -110,10 +137,10 @@ public class Query implements Spliterator<ResultRow> {
         if (orderBy != null) {
             stringBuilder.append(" ")
                     .append("order by %s".formatted(orderBy.name));
-        }
 
-        if (reverse) {
-            stringBuilder.append(" desc");
+            if (reverse) {
+                stringBuilder.append(" desc");
+            }
         }
 
         if (limit != null) {
@@ -131,12 +158,11 @@ public class Query implements Spliterator<ResultRow> {
 
     public Stream<ResultRow> stream() {
         try {
-            Statement statement = connection.createStatement();
             String sql = buildQuery();
-
+            PreparedStatement statement = connection.prepareStatement(sql);
             GlobalLogger.logger().info("exec query: {}", sql);
 
-            this.resultSet = statement.executeQuery(sql);
+            this.resultSet = statement.executeQuery();
             if (this.resultSet == null) {
                 throw new SQLException("cannot access result set");
             }
@@ -150,7 +176,7 @@ public class Query implements Spliterator<ResultRow> {
     }
 
     @Override
-    public boolean tryAdvance(Consumer<? super ResultRow> action) {
+    public boolean tryAdvance(@Nonnull Consumer<? super ResultRow> action) {
         boolean hasNext = Optional.ofNullable(this.resultSet).map(value -> {
             try {
                 return value.next();
@@ -167,6 +193,7 @@ public class Query implements Spliterator<ResultRow> {
     }
 
     @Override
+    @Nullable
     public Spliterator<ResultRow> trySplit() {
         return null;
     }
