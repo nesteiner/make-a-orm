@@ -1,20 +1,43 @@
 package com.steiner.make_a_orm.column.string;
 
+import com.steiner.make_a_orm.column.trait.IDefaultValueColumn;
+import com.steiner.make_a_orm.column.trait.IInListColumn;
+import com.steiner.make_a_orm.column.trait.ILikeColumn;
+import com.steiner.make_a_orm.column.trait.INullOrNotColumn;
+import com.steiner.make_a_orm.exception.SQLBuildException;
 import jakarta.annotation.Nonnull;
 
-public class TextColumn extends AbstractStringColumn {
-    public TextColumn(String name) {
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public final class TextColumn extends StringColumn
+        implements
+        IDefaultValueColumn<String, TextColumn>,
+        INullOrNotColumn<String, TextColumn>,
+        ILikeColumn<TextColumn>,
+        IInListColumn<String, TextColumn> {
+    public TextColumn(@Nonnull String name) {
         super(name);
+    }
+
+    @Override
+    public void inject(@Nonnull PreparedStatement statement, int index, @Nonnull String value) {
+        try {
+            statement.setString(index, value);
+        } catch (SQLException e) {
+            throw new SQLBuildException(e);
+        }
+    }
+
+    @Nonnull
+    @Override
+    public String sqlType() {
+        return "text";
     }
 
     @Nonnull
     @Override
     public TextColumn self() {
         return this;
-    }
-
-    @Override
-    public String sqlType() {
-        return "text";
     }
 }

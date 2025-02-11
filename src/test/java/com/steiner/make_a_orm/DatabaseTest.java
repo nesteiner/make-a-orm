@@ -1,10 +1,8 @@
 package com.steiner.make_a_orm;
 
 import com.mysql.cj.jdbc.Driver;
-import com.steiner.make_a_orm.column.numeric.*;
 import com.steiner.make_a_orm.database.Database;
 import com.steiner.make_a_orm.impl.NumberCollectionTable;
-import com.steiner.make_a_orm.table.IntIdTable;
 import com.steiner.make_a_orm.transaction.Transaction;
 import com.steiner.make_a_orm.utils.SchemaUtils;
 import com.steiner.make_a_orm.utils.result.Result;
@@ -17,8 +15,8 @@ public class DatabaseTest {
             .username("steiner")
             .password("779151714")
             .url("jdbc:mysql://localhost/playground")
-            .build()
-            .get();
+            .build().get();
+
 
     NumberCollectionTable longIdTable = NumberCollectionTable.getInstance();
 

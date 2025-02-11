@@ -1,141 +1,122 @@
 package com.steiner.make_a_orm.column;
 
-import com.steiner.make_a_orm.column.constract.IBuildColumn;
-import com.steiner.make_a_orm.column.constract.IDefaultColumn;
-import com.steiner.make_a_orm.column.constract.IEqColumn;
+import com.steiner.make_a_orm.column.constraint.AbstractConstraint;
+import com.steiner.make_a_orm.column.constraint.ConstraintType;
+import com.steiner.make_a_orm.column.constraint.impl.*;
 import com.steiner.make_a_orm.exception.SQLBuildException;
-import com.steiner.make_a_orm.exception.SQLParseException;
-import com.steiner.make_a_orm.operation.where.WhereStatement;
-import com.steiner.make_a_orm.operation.where.impl.InList;
-import com.steiner.make_a_orm.operation.where.impl.NullPredicate;
+import com.steiner.make_a_orm.exception.SQLRuntimeException;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-public abstract class Column<T>
-        implements IBuildColumn, IEqColumn<T, Column<T>>, IDefaultColumn<T> {
-    public final String name;
-    private boolean isNullable = false;
-    private boolean isPrimaryKey = false;
-    private boolean isUnique = false;
-    private boolean hasDefault = false;
-
-    @Nullable
-    private T defaultValue = null;
-
-    @Nullable
-    private String defaultExpression = null;
+public abstract class Column<T> {
+    public String name;
+    public List<AbstractConstraint> constraints;
+    public boolean isPrimaryKey;
+    public boolean isAutoIncrement;
+    public boolean setDefault;
+    public boolean isNullable;
 
     public Column(String name) {
         this.name = name;
+        this.constraints = new LinkedList<>();
+        this.constraints.add(new NotNullConstraint());
+        this.isPrimaryKey = false;
+        this.isAutoIncrement = false;
+        this.setDefault = false;
+        this.isNullable = false;
     }
 
-    @Nonnull
-    public String name() {
-        return this.name;
-    }
-
-    @Override
-    public void setDefault(boolean hasDefault) {
-        this.hasDefault = hasDefault;
-    }
-
-    @Override
-    public boolean isNullable() {
-        return this.isNullable;
-    }
-
-    @Override
-    public void setDefaultValue(@Nullable T defaultValue) {
-        this.defaultValue = defaultValue;
-    }
-
-    @Override
-    public void setDefaultExpression(@Nonnull String defaultExpression) {
-        this.defaultExpression = defaultExpression;
-    }
-
-    // TODO this should be in interface
+    // constraints
     public Column<T> nullable() {
-        this.isNullable = true;
-        return this;
-    }
-
-    public Column<T> primaryKey() {
-        this.isPrimaryKey = true;
+        constraints.removeIf(constraint -> constraint instanceof NotNullConstraint);
+        isNullable = true;
         return this;
     }
 
     public Column<T> uniqueIndex() {
-        this.isUnique = true;
+        constraints.add(new UniqueConstraint());
         return this;
     }
 
-    public boolean isPrimary() {
-        return isPrimaryKey;
+    public boolean hasDefault() {
+        // 不考虑 primary key auto_increment 字段
+        return setDefault;
     }
 
-    public abstract String sqlType();
-    public abstract String valueToDB(@Nonnull T value);
-
-    @Override
-    public String buildColumn() {
-        if (hasDefault) {
-            if (defaultValue != null && defaultExpression != null) {
-                throw new SQLBuildException("cannot set both default value and default expression");
-            }
-        }
-
-        StringBuilder builder = new StringBuilder();
-        builder.append(String.format("`%s`", name))
-                .append(" ")
-                .append(sqlType());
-
-        if (!isNullable) {
-            builder.append(" ")
-                    .append("not null");
-        }
-
-        if (isUnique) {
-            builder.append(" ")
-                    .append("unique");
-        }
-
-        if (hasDefault) {
-            if (defaultValue != null) {
-                builder.append(" ")
-                        .append(valueToDB(defaultValue));
-            } else if (defaultExpression != null) {
-                builder.append(" ")
-                        .append(defaultExpression);
-            }
-        }
-
-        return builder.toString();
-    }
-
+    @SuppressWarnings("unchecked")
     @Nullable
-    public T valueFromDB(ResultSet result) {
+    public T valueFromDB(@Nonnull ResultSet result) {
         try {
             return (T) result.getObject(name);
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new SQLParseException(e.getMessage());
+            e.printStackTrace(System.out);
+            throw new SQLRuntimeException(e.getMessage(), e);
         }
     }
 
-    public WhereStatement isnull() {
-        return new NullPredicate<>(this, true);
+    /**
+     * use it when meeting where and set
+     */
+    public abstract void inject(@Nonnull PreparedStatement statement, int index, @Nonnull T value);
+    public final void injectDefault(@Nonnull PreparedStatement statement, int index) {
+        //noinspection unchecked
+        constraints.stream()
+                .filter(constraint -> constraint instanceof DefaultValueConstraint<?>)
+                .findFirst()
+                .map(constraint -> (DefaultValueConstraint<T>) constraint)
+                .ifPresentOrElse(constraint -> {
+                    @Nullable T defaultValue = constraint.value;
+
+                    if (defaultValue == null) {
+                        try {
+                            statement.setObject(index, null);
+                        } catch (SQLException exception) {
+                            throw new SQLBuildException(exception);
+                        }
+                    } else {
+                        inject(statement, index, constraint.value);
+                    }
+
+                }, () -> {
+                    if (!(isPrimaryKey && isAutoIncrement)) {
+                        throw new SQLBuildException("there is no default value set in `%s`".formatted(name));
+                    }
+
+                });
     }
 
-    public WhereStatement notnull() {
-        return new NullPredicate<>(this, false);
+
+    @Nonnull
+    public abstract String sqlType();
+    @Nonnull
+    public abstract String format(@Nonnull T value);
+
+    public final String inlineConstraints() {
+        return constraints.stream()
+                .filter(constraint -> constraint.type() == ConstraintType.Inline)
+                .map(AbstractConstraint::constraint)
+                .collect(Collectors.joining(" "));
     }
 
-    public WhereStatement inlist(List<T> list) {
-        return new InList<>(this, list);
+    public final List<String> standAloneConstraints() {
+        return constraints.stream()
+                .filter(constraint -> constraint.type() == ConstraintType.StandAlone)
+                .map(AbstractConstraint::constraint)
+                .toList();
+    }
+
+    public final Optional<String> suffixConstraints() {
+        return constraints.stream()
+                .filter(constraint -> constraint.type() == ConstraintType.Suffix)
+                .findFirst()
+                .map(AbstractConstraint::constraint);
     }
 }

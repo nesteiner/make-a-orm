@@ -1,43 +1,39 @@
 package com.steiner.make_a_orm.column.numeric;
 
-import com.steiner.make_a_orm.column.constract.IAutoIncrement;
-import com.steiner.make_a_orm.column.constract.IDefaultValueColumn;
+import com.steiner.make_a_orm.column.trait.*;
+import com.steiner.make_a_orm.exception.SQLBuildException;
 import jakarta.annotation.Nonnull;
 
-public final class IntColumn extends AbstractNumericColumn<Integer>
-        implements
-        IAutoIncrement<IntColumn>,
-        IDefaultValueColumn<Integer, IntColumn> {
-    public boolean isAutoIncrement = false;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
-    public IntColumn(String name) {
+public final class IntColumn extends NumericColumn<Integer>
+        implements
+        IEqualColumn<Integer, IntColumn>,
+        IDefaultValueColumn<Integer, IntColumn>,
+        IAutoIncrementColumn<Integer, IntColumn>,
+        IPrimaryKeyColumn<Integer, IntColumn>,
+        ICompareColumn<Integer, IntColumn>,
+        IBetweenColumn<Integer, IntColumn>,
+        IInListColumn<Integer, IntColumn>,
+        INullOrNotColumn<Integer, IntColumn> {
+    public IntColumn(@Nonnull String name) {
         super(name);
     }
 
     @Override
-    public String valueToDB(@Nonnull Integer value) {
-        return String.valueOf(value);
-    }
-
-    @Override
-    public String sqlType() {
-        if (isAutoIncrement) {
-            return "int auto_increment";
-        } else {
-            return "int";
+    public void inject(@Nonnull PreparedStatement statement, int index, @Nonnull Integer value) {
+        try {
+            statement.setInt(index, value);
+        } catch (SQLException e) {
+            throw new SQLBuildException(e);
         }
     }
 
     @Nonnull
     @Override
-    public IntColumn autoIncrement() {
-        isAutoIncrement = true;
-        return this;
-    }
-
-    @Override
-    public boolean isAutoIncrement() {
-        return this.isAutoIncrement;
+    public String sqlType() {
+        return "int";
     }
 
     @Nonnull

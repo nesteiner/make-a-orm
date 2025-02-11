@@ -1,46 +1,44 @@
 package com.steiner.make_a_orm.column.numeric;
 
-import com.steiner.make_a_orm.column.constract.IAutoIncrement;
-import com.steiner.make_a_orm.column.constract.IDefaultValueColumn;
+import com.steiner.make_a_orm.column.trait.*;
+import com.steiner.make_a_orm.exception.SQLBuildException;
 import jakarta.annotation.Nonnull;
 
-public class BigIntColumn
-        extends AbstractNumericColumn<Long>
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
+public final class BigIntColumn extends NumericColumn<Long>
         implements
-        IAutoIncrement<BigIntColumn>,
-        IDefaultValueColumn<Long, BigIntColumn> {
-
-    private boolean isAutoIncrement;
-
-    public BigIntColumn(String name) {
+        IAutoIncrementColumn<Long, BigIntColumn>,
+        IDefaultValueColumn<Long, BigIntColumn>,
+        IEqualColumn<Long, BigIntColumn>,
+        IPrimaryKeyColumn<Long, BigIntColumn>,
+        ICompareColumn<Long, BigIntColumn>,
+        IBetweenColumn<Long, BigIntColumn>,
+        INullOrNotColumn<Long, BigIntColumn>,
+        IInListColumn<Long, BigIntColumn> {
+    public BigIntColumn(@Nonnull String name) {
         super(name);
-        this.isAutoIncrement = false;
     }
 
     @Override
-    @Nonnull
-    public BigIntColumn self() {
-        return this;
-    }
-
-    @Override
-    public String sqlType() {
-        if (isAutoIncrement) {
-            return "bigint auto_increment";
-        } else {
-            return "bigint";
+    public void inject(@Nonnull PreparedStatement statement, int index, @Nonnull Long value) {
+        try {
+            statement.setLong(index, value);
+        } catch (SQLException e) {
+            throw new SQLBuildException(e);
         }
     }
 
     @Override
-    public boolean isAutoIncrement() {
-        return this.isAutoIncrement;
+    @Nonnull
+    public String sqlType() {
+        return "bigint";
     }
 
     @Nonnull
     @Override
-    public BigIntColumn autoIncrement() {
-        this.isAutoIncrement = true;
+    public BigIntColumn self() {
         return this;
     }
 }

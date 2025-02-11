@@ -32,11 +32,11 @@ public final class Result<T, E extends Throwable> {
         }
     }
 
-    private static <T, E extends Throwable> Result<T, E> Ok(@Nonnull T data) {
+    public static <T, E extends Throwable> Result<T, E> Ok(@Nonnull T data) {
         return new Result<>(data, null, null);
     }
 
-    private static <T, E extends Throwable> Result<T, E> Err(@Nonnull E error, @Nonnull Throwable cause) {
+    public static <T, E extends Throwable> Result<T, E> Err(@Nonnull E error, @Nonnull Throwable cause) {
         return new Result<>(null, error, cause);
     }
 

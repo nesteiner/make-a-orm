@@ -1,7 +1,7 @@
 package com.steiner.make_a_orm.database;
 
-import com.steiner.make_a_orm.exception.SQLBuildException;
 import com.steiner.make_a_orm.utils.result.Result;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
 import java.lang.reflect.Field;
@@ -13,80 +13,89 @@ import java.sql.SQLException;
 public class Database {
     public static class Builder {
         @Nullable
-        private Driver driver;
+        public Driver driver;
         @Nullable
-        private String url;
+        public String url;
         @Nullable
-        private String username;
+        public String username;
         @Nullable
-        private String password;
+        public String password;
 
-        private Builder() {
+        public Builder() {
             this.driver = null;
             this.url = null;
             this.username = null;
             this.password = null;
         }
 
-        public Builder driver(Driver driver) {
+        public Builder driver(@Nonnull Driver driver) {
             this.driver = driver;
             return this;
         }
 
-        public Builder url(String url) {
+        public Builder url(@Nonnull String url) {
             this.url = url;
             return this;
         }
 
-        public Builder username(String username) {
+        public Builder username(@Nonnull String username) {
             this.username = username;
             return this;
         }
 
-        public Builder password(String password) {
+        public Builder password(@Nonnull String password) {
             this.password = password;
             return this;
         }
 
         public Result<Database, SQLException> build() {
-            return Result.from(() -> {
-                Field[] fields = getClass().getDeclaredFields();
-                for (Field field: fields) {
-                    try {
-                        Object value = field.get(this);
-                        if (value == null) {
-                            throw new IllegalAccessException("there is null field in the builder");
-                        }
-                    } catch (IllegalAccessException e) {
-                        throw new SQLException(e.getMessage());
+            Field[] fields = this.getClass().getDeclaredFields();
+            for (Field field: fields) {
+                try {
+                    Object value = field.get(this);
+                    if (value == null) {
+                        throw new IllegalAccessException("there is null field in the builder");
                     }
+                } catch (IllegalAccessException e) {
+                    SQLException sqlException = new SQLException(e.getMessage());
+                    return Result.Err(sqlException, e);
                 }
+            }
 
-                return new Database(driver, url, username, password);
+            Database database = new Database(driver, url, username, password);
+            return Result.from(() -> {
+               DriverManager.registerDriver(database.driver);
+               database.connection = DriverManager.getConnection(url, username, password);
+               return database;
             });
         }
+
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
+    @Nonnull
     public Driver driver;
+
+    @Nonnull
     public String url;
+
+    @Nonnull
     public String username;
+
+    @Nonnull
     public String password;
 
     @Nullable
     public Connection connection;
 
-    private Database(Driver driver, String url, String username, String password) throws SQLException {
+    private Database(@Nonnull Driver driver, @Nonnull String url, @Nonnull String username, @Nonnull String password) {
         this.driver = driver;
         this.url = url;
         this.username = username;
         this.password = password;
-        DriverManager.registerDriver(driver);
-        this.connection = DriverManager.getConnection(url, username, password);
+        this.connection = null;
     }
 
-
+    public static Builder builder() {
+        return new Builder();
+    }
 }

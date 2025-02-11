@@ -18,7 +18,7 @@ public class SchemaUtils {
             Statement statement = connection.createStatement();
 
             for (Table table: tables) {
-                String sql = table.build();
+                String sql = table.toSQL();
 
                 GlobalLogger.logger().info("execute create table: {}", sql);
 
